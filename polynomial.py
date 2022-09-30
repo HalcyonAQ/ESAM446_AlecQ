@@ -5,7 +5,7 @@
 
 
 import numpy
-class Polynomial:
+class polynomial:
     def __init__(self,coefficients):
         self.coefficients = coefficients
     @staticmethod
@@ -43,7 +43,7 @@ class Polynomial:
         coeffs = numpy.zeros(max(orders)+1,dtype=int)
         for j in raw:
             coeffs[int(j.split("^")[1])] = int(j.split("*")[0])  
-        return Polynomial(coeffs)
+        return polynomial(coeffs)
     def __repr__(self):
         string = ""
         i = 0
@@ -103,7 +103,7 @@ class Polynomial:
                 j = len(coeffs)-1
             else:
                 break
-        return Polynomial(coeffs)
+        return polynomial(coeffs)
     def __sub__(self,other):
         coeffs = numpy.zeros(max(len(self.coefficients),len(other.coefficients))+1,dtype=int)
         i = 0
@@ -121,7 +121,7 @@ class Polynomial:
                 j = len(coeffs)-1
             else:
                 break
-        return Polynomial(coeffs)
+        return polynomial(coeffs)
     def __mul__(self,other):
         coeffs = numpy.zeros(len(self.coefficients)+len(other.coefficients)+1,dtype=int)
         i=0
@@ -139,7 +139,7 @@ class Polynomial:
                 j = len(coeffs)-1
             else:
                 break    
-        return Polynomial(coeffs)
+        return polynomial(coeffs)
     def __truediv__(self,other):
         return RationalPolynomial(self,other)
 
@@ -157,12 +157,12 @@ class RationalPolynomial:
         gcd = sympy.gcd(n,d)
         [n,r1] = sympy.div(n,gcd,domain = "QQ")
         [d,r2] = sympy.div(d,gcd,domain = "QQ")
-        self.numerator = Polynomial.from_string(repr(n).replace("**","^"))
-        self.denominator = Polynomial.from_string(repr(d).replace("**","^"))
+        self.numerator = polynomial.from_string(repr(n).replace("**","^"))
+        self.denominator = polynomial.from_string(repr(d).replace("**","^"))
     def from_string(str):
         n = str.split("/")[0]
         d = str.split("/")[1]
-        return RationalPolynomial(Polynomial.from_string(n[1:-1]),Polynomial.from_string(d[1:-1]))
+        return RationalPolynomial(polynomial.from_string(n[1:-1]),polynomial.from_string(d[1:-1]))
     def __repr__(self):
         return "("+repr(self.numerator)+")" + "/" + "("+repr(self.denominator)+")"
     def __add__(self,other):
