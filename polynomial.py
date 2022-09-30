@@ -3,8 +3,7 @@
 
 # In[381]:
 
-
-import numpy
+import numpy as np
 class Polynomial:
     def __init__(self,coefficients):
         self.coefficients = coefficients
@@ -40,7 +39,7 @@ class Polynomial:
         while i<len(raw):
             orders.append(int(raw[i].split("^")[1])) 
             i = i+1
-        coeffs = numpy.zeros(max(orders)+1,dtype=int)
+        coeffs = np.zeros(max(orders)+1,dtype=int)
         for j in raw:
             coeffs[int(j.split("^")[1])] = int(j.split("*")[0])  
         return Polynomial(coeffs)
@@ -85,9 +84,9 @@ class Polynomial:
             i += 1
         return string
     def __eq__(self, other):
-        return numpy.array_equal(self.coefficients,other.coefficients)
+        return np.array_equal(self.coefficients,other.coefficients)
     def __add__(self,other):
-        coeffs = numpy.zeros(max(len(self.coefficients),len(other.coefficients))+1,dtype=int)
+        coeffs = np.zeros(max(len(self.coefficients),len(other.coefficients))+1,dtype=int)
         i = 0
         while i<len(self.coefficients):
             coeffs[i] += self.coefficients[i]
@@ -99,13 +98,13 @@ class Polynomial:
         j = len(coeffs)-1
         while j>0:
             if coeffs[j] == 0:
-                coeffs = numpy.delete(coeffs,j)
+                coeffs = np.delete(coeffs,j)
                 j = len(coeffs)-1
             else:
                 break
         return Polynomial(coeffs)
     def __sub__(self,other):
-        coeffs = numpy.zeros(max(len(self.coefficients),len(other.coefficients))+1,dtype=int)
+        coeffs = np.zeros(max(len(self.coefficients),len(other.coefficients))+1,dtype=int)
         i = 0
         while i<len(self.coefficients):
             coeffs[i] += self.coefficients[i]
@@ -117,13 +116,13 @@ class Polynomial:
         j = len(coeffs)-1
         while j>0:
             if coeffs[j] == 0:
-                coeffs = numpy.delete(coeffs,j)
+                coeffs = np.delete(coeffs,j)
                 j = len(coeffs)-1
             else:
                 break
         return Polynomial(coeffs)
     def __mul__(self,other):
-        coeffs = numpy.zeros(len(self.coefficients)+len(other.coefficients)+1,dtype=int)
+        coeffs = np.zeros(len(self.coefficients)+len(other.coefficients)+1,dtype=int)
         i=0
         j=0
         while i<len(self.coefficients):
@@ -135,7 +134,7 @@ class Polynomial:
         j = len(coeffs)-1
         while j>0:
             if coeffs[j] == 0:
-                coeffs = numpy.delete(coeffs,j)
+                coeffs = np.delete(coeffs,j)
                 j = len(coeffs)-1
             else:
                 break    
