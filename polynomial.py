@@ -4,7 +4,7 @@
 # In[381]:
 
 
-import numpy
+from numpy import numpy as np
 class polynomial:
     def __init__(self,coefficients):
         self.coefficients = coefficients
