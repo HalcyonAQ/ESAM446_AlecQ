@@ -3,8 +3,7 @@
 
 # In[381]:
 
-pip install numpy
-from numpy import numpy as np
+import numpy as np
 class polynomial:
     def __init__(self,coefficients):
         self.coefficients = coefficients
