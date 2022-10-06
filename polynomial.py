@@ -9,7 +9,11 @@ class Polynomial:
         self.coefficients = coefficients
     @staticmethod
     def from_string(str):
-        raw = str.split(" ")
+        stri = str.replace(" ","")
+        stri = str.replace("+", " ")
+        stri = str.replace("-"," -")
+        raw = stri.split(" ")
+        raw = [x for x in raw if x != '']
         i=0
         while i<len(raw):
             if raw[i][0] == "x":
