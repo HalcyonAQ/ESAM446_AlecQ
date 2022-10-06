@@ -14,7 +14,7 @@ def test_UFD(order_index):
 
     f = 1/(2+np.sin(x)**2)
 
-    d = finite.DifferenceUniformGrid(1, order, grid)
+    d = finite.DifferenceNonUniformGrid(1, order, grid)
 
     df = d @ f
     df0 = -((2*np.cos(x)*np.sin(x))/(2 + np.sin(x)**2)**2)
@@ -34,7 +34,7 @@ def test_UFD_2(order_index):
 
     f = 1/(2+np.sin(x)**2)
 
-    d2 = finite.DifferenceUniformGrid(2, order, grid)
+    d2 = finite.DifferenceNonUniformGrid(2, order, grid)
 
     d2f = d2 @ f
     d2f0 = (8*np.cos(x)**2*np.sin(x)**2)/(2 + np.sin(x)**2)**3 - (2*np.cos(x)**2)/(2 + np.sin(x)**2)**2 + (2*np.sin(x)**2)/(2 + np.sin(x)**2)**2
@@ -54,7 +54,7 @@ def test_UFD_3(order_index):
 
     f = 1/(2+np.sin(x)**2)
 
-    d3 = finite.DifferenceUniformGrid(3, order, grid)
+    d3 = finite.DifferenceNonUniformGrid(3, order, grid)
 
     d3f = d3 @ f
     d3f0 = (2*np.cos(x)**3 * (37*np.sin(x) + np.sin(3*x)))/(2 + np.sin(x)**2)**4
