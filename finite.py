@@ -28,34 +28,25 @@ class DifferenceUniformGrid:
         self.convergence_order = convergence_order
         self.stencil_type = stencil_type
         self.grid = grid
-        
-        
-        ##define needed variables
+
         size = int(2*math.floor((self.derivative_order+1)/2)+self.convergence_order-1)
         
         j = np.arange(int(-(size+1)/2+1),int((size+1)/2))
         b = np.zeros(size,dtype = int)
         b[self.derivative_order] = 1
         S = []
-        
-        ##create s matrix
         i = 0
         while i<size:
             S.append(list(1/factorial(i)*(j*self.grid.dx)**i))
             i = i+1
             
-        ##compute a matrix from s matrix
         a = np.linalg.inv(S) @ b
-        
-        ##assign values to sparse matrix
         D = sparse.diags(a, offsets=j, shape = [int(self.grid.N),int(self.grid.N)])
         D = D.tocsr()
-        
-        ##impute corner cases
         p = 0
         q = 0
         r = 0
-        while p < self.grid.N:
+        while p < N:
             while q < size:
                 D[p,j[q]] = a[r]
                 D[-(p+1),-j[q]-1] = a[-r-1]
@@ -141,7 +132,7 @@ class DifferenceNonUniformGrid:
 
 
 
-        ##create a matrix using individual s matrix
+        ##create a matrix
         a = [np.zeros(size).tolist() for x in range(N)]
         print(list(a))
         n = 0
@@ -163,7 +154,7 @@ class DifferenceNonUniformGrid:
         while counter <size:  
             ax.append([sub[counter] for sub in a])
             counter = counter + 1
-        print(ax) 
+
 
 
         ##create sparse matrix
@@ -174,6 +165,7 @@ class DifferenceNonUniformGrid:
         p = 0
         q = 0
         r = 0
+        
         while p < N:
             while q < size:
                 D[p,j[q]] = a[p][r]
@@ -183,7 +175,7 @@ class DifferenceNonUniformGrid:
             p = p + 1
             q = p
             r = 0 
-            
+        
         ##assign attribute
         self.matrix = D
 
