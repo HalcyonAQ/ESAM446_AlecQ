@@ -3,16 +3,16 @@
 
 # In[381]:
 
-import numpy as np
+import numpy
 class Polynomial:
     def __init__(self,coefficients):
         self.coefficients = coefficients
     @staticmethod
     def from_string(str):
-        stri = str.replace(" ","")
-        stri = str.replace("+", " ")
-        stri = str.replace("-"," -")
-        raw = stri.split(" ")
+        str = str.replace(" ","")
+        str = str.replace("+", " ")
+        str = str.replace("-"," -")
+        raw = str.split(" ")
         raw = [x for x in raw if x != '']
         i=0
         while i<len(raw):
@@ -43,7 +43,7 @@ class Polynomial:
         while i<len(raw):
             orders.append(int(raw[i].split("^")[1])) 
             i = i+1
-        coeffs = np.zeros(max(orders)+1,dtype=int)
+        coeffs = numpy.zeros(max(orders)+1,dtype=int)
         for j in raw:
             coeffs[int(j.split("^")[1])] = int(j.split("*")[0])  
         return Polynomial(coeffs)
@@ -88,9 +88,9 @@ class Polynomial:
             i += 1
         return string
     def __eq__(self, other):
-        return np.array_equal(self.coefficients,other.coefficients)
+        return numpy.array_equal(self.coefficients,other.coefficients)
     def __add__(self,other):
-        coeffs = np.zeros(max(len(self.coefficients),len(other.coefficients))+1,dtype=int)
+        coeffs = numpy.zeros(max(len(self.coefficients),len(other.coefficients))+1,dtype=int)
         i = 0
         while i<len(self.coefficients):
             coeffs[i] += self.coefficients[i]
@@ -102,13 +102,13 @@ class Polynomial:
         j = len(coeffs)-1
         while j>0:
             if coeffs[j] == 0:
-                coeffs = np.delete(coeffs,j)
+                coeffs = numpy.delete(coeffs,j)
                 j = len(coeffs)-1
             else:
                 break
         return Polynomial(coeffs)
     def __sub__(self,other):
-        coeffs = np.zeros(max(len(self.coefficients),len(other.coefficients))+1,dtype=int)
+        coeffs = numpy.zeros(max(len(self.coefficients),len(other.coefficients))+1,dtype=int)
         i = 0
         while i<len(self.coefficients):
             coeffs[i] += self.coefficients[i]
@@ -120,13 +120,13 @@ class Polynomial:
         j = len(coeffs)-1
         while j>0:
             if coeffs[j] == 0:
-                coeffs = np.delete(coeffs,j)
+                coeffs = numpy.delete(coeffs,j)
                 j = len(coeffs)-1
             else:
                 break
         return Polynomial(coeffs)
     def __mul__(self,other):
-        coeffs = np.zeros(len(self.coefficients)+len(other.coefficients)+1,dtype=int)
+        coeffs = numpy.zeros(len(self.coefficients)+len(other.coefficients)+1,dtype=int)
         i=0
         j=0
         while i<len(self.coefficients):
@@ -138,7 +138,7 @@ class Polynomial:
         j = len(coeffs)-1
         while j>0:
             if coeffs[j] == 0:
-                coeffs = np.delete(coeffs,j)
+                coeffs = numpy.delete(coeffs,j)
                 j = len(coeffs)-1
             else:
                 break    
@@ -158,10 +158,14 @@ class RationalPolynomial:
         n = sympy.sympify(repr(self.numerator))
         d = sympy.sympify(repr(self.denominator))
         gcd = sympy.gcd(n,d)
-        [n,r1] = sympy.div(n,gcd,domain = "QQ")
-        [d,r2] = sympy.div(d,gcd,domain = "QQ")
-        self.numerator = Polynomial.from_string(repr(n).replace("**","^"))
-        self.denominator = Polynomial.from_string(repr(d).replace("**","^"))
+        gcds = repr(gcd).replace("**","^")
+        gcd_c = numpy.flip(Polynomial.from_string(gcds).coefficients)
+        n_c = numpy.flip(self.numerator.coefficients)
+        d_c = numpy.flip(self.denominator.coefficients)
+        [n_f,r1] = numpy.polydiv(n_c,gcd_c)
+        [d_f,r2] = numpy.polydiv(d_c,gcd_c)
+        self.numerator = Polynomial(numpy.flip(n_f))
+        self.denominator = Polynomial(numpy.flip(d_f))
     def from_string(str):
         n = str.split("/")[0]
         d = str.split("/")[1]
