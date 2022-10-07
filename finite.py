@@ -55,7 +55,7 @@ class DifferenceUniformGrid:
         p = 0
         q = 0
         r = 0
-        while p < size:
+        while p < self.grid.N:
             while q < size:
                 D[p,j[q]] = a[r]
                 D[-(p+1),-j[q]-1] = a[-r-1]
@@ -174,7 +174,7 @@ class DifferenceNonUniformGrid:
         p = 0
         q = 0
         r = 0
-        while p < size:
+        while p < N:
             while q < size:
                 D[p,j[q]] = a[p][r]
                 D[-(p+1),-j[q]-1] = a[-p-1][-r-1]
