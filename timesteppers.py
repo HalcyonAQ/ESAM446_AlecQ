@@ -229,7 +229,7 @@ class BackwardDifferentiationFormula(Timestepper):
                 i = i+1
             a = np.zeros(k)
             b = np.zeros(k)
-            b[1] = self.dt[[-2]
+            b[1] = self.dt[-2]
             a = np.linalg.inv(s).dot(b)
             a0 = 1/a[0]
             a = a*a0
