@@ -200,7 +200,6 @@ class BackwardDifferentiationFormula(Timestepper):
                     s[j][i] = (-i*self.dt[-1-i])**j/math.factorial(j)
                     j=j+1
                 i = i+1
-            print(s)
             a = np.zeros(k)
             b = np.zeros(k)
             b[1] = dt
@@ -228,7 +227,6 @@ class BackwardDifferentiationFormula(Timestepper):
                     s[j][i] = (-i*self.dt[-1-i])**j/math.factorial(j)
                     j=j+1
                 i = i+1
-            print(s)
             a = np.zeros(k)
             b = np.zeros(k)
             b[1] = dt
