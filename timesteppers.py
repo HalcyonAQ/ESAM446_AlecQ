@@ -185,7 +185,6 @@ class BackwardDifferentiationFormula(Timestepper):
         self.uf = []
         self.uf.append(self.u)
         self.dt = []
-        self.dt.append(0)
 
     def _step(self, dt):
         if self.iter == 0:
