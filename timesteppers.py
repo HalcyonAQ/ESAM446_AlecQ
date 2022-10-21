@@ -188,6 +188,8 @@ class BackwardDifferentiationFormula(Timestepper):
         self.dt.append(0)
 
     def _step(self, dt):
+        if self.iter == 0:
+            self.dt.append(dt)
         if self.iter+1 < self.steps:
             self.dt.append(dt)
             k = self.iter+2
@@ -196,9 +198,10 @@ class BackwardDifferentiationFormula(Timestepper):
             while i<k:
                 j = 0
                 while j<k:
-                    s[j][i] = (-i*self.dt[-i-1])**j/math.factorial(j)
+                    s[j][i] = (-i*self.dt[-1-i])**j/math.factorial(j)
                     j=j+1
                 i = i+1
+            print(s)
             a = np.zeros(k)
             b = np.zeros(k)
             b[1] = dt
@@ -223,9 +226,10 @@ class BackwardDifferentiationFormula(Timestepper):
             while i<k:
                 j = 0
                 while j<k:
-                    s[j][i] = (-i*self.dt[-i-1])**j/math.factorial(j)
+                    s[j][i] = (-i*self.dt[-1-i])**j/math.factorial(j)
                     j=j+1
                 i = i+1
+            print(s)
             a = np.zeros(k)
             b = np.zeros(k)
             b[1] = dt
@@ -242,5 +246,7 @@ class BackwardDifferentiationFormula(Timestepper):
             unew = np.linalg.solve(LHS,R)
             self.uf = self.uf[1:]
             self.dt = self.dt[1:]
+            self.uf.append(unew)
+            return unew
             self.uf.append(unew)
             return unew
