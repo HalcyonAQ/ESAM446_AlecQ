@@ -1,7 +1,6 @@
 import numpy as np
 from scipy.special import factorial
 from scipy import sparse
-import math
 
 class UniformPeriodicGrid:
 
@@ -19,236 +18,141 @@ class NonUniformPeriodicGrid:
         self.length = length
         self.N = len(values)
 
+    def dx_array(self, j):
+        shape = (self.N, len(j))
+        dx = np.zeros(shape)
+
+        jmin = -np.min(j)
+        jmax = np.max(j)
+
+        values_padded = np.zeros(self.N + jmin + jmax)
+        if jmin > 0:
+            values_padded[:jmin] = self.values[-jmin:] - self.length
+        if jmax > 0:
+            values_padded[jmin:-jmax] = self.values
+            values_padded[-jmax:] = self.length + self.values[:jmax]
+        else:
+            values_padded[jmin:] = self.values
+
+        for i in range(self.N):
+            dx[i, :] = values_padded[jmin+i+j] - values_padded[jmin+i]
+
+        return dx
+
 
 class DifferenceUniformGrid:
 
     def __init__(self, derivative_order, convergence_order, grid, stencil_type='centered'):
+        if stencil_type == 'centered' and convergence_order % 2 != 0:
+            raise ValueError("Centered finite difference has even convergence order")
 
         self.derivative_order = derivative_order
         self.convergence_order = convergence_order
         self.stencil_type = stencil_type
-        self.grid = grid
-        
-        
-        ##define needed variables
-        size = int(2*math.floor((self.derivative_order+1)/2)+self.convergence_order-1)
-        
-        j = np.arange(int(-(size+1)/2+1),int((size+1)/2))
-        b = np.zeros(size,dtype = int)
-        b[self.derivative_order] = 1
-        S = []
-        
-        ##create s matrix
-        i = 0
-        while i<size:
-            S.append(list(1/factorial(i)*(j*self.grid.dx)**i))
-            i = i+1
-            
-        ##compute a matrix from s matrix
-        a = np.linalg.inv(S) @ b
-        
-        ##assign values to sparse matrix
-        D = sparse.diags(a, offsets=j, shape = [int(self.grid.N),int(self.grid.N)])
-        D = D.tocsr()
-        
-        ##impute corner cases
-        p = 0
-        q = 0
-        r = 0
-        while p < size:
-            while q < size:
-                D[p,j[q]] = a[r]
-                D[-(p+1),-j[q]-1] = a[-r-1]
-                q = q+1
-                r = r + 1
-            p = p + 1
-            q = p
-            r = 0
-        
-        
-        self.matrix = D
+        self._stencil_shape(stencil_type)
+        self._make_stencil(grid)
+        self._build_matrix(grid)
 
     def __matmul__(self, other):
         return self.matrix @ other
-    
+
+    def _stencil_shape(self, stencil_type):
+        dof = self.derivative_order + self.convergence_order
+
+        if stencil_type == 'centered':
+            # cancellation if derivative order is even
+            dof = dof - (1 - dof % 2)
+            j = np.arange(dof) - dof//2
+
+        self.dof = dof
+        self.j = j
+
+    def _make_stencil(self, grid):
+
+        # assume constant grid spacing
+        self.dx = grid.dx
+        i = np.arange(self.dof)[:, None]
+        j = self.j[None, :]
+        S = 1/factorial(i)*(j*self.dx)**i
+
+        b = np.zeros( self.dof )
+        b[self.derivative_order] = 1.
+
+        self.stencil = np.linalg.solve(S, b)
+
+    def _build_matrix(self, grid):
+        shape = [grid.N] * 2
+        matrix = sparse.diags(self.stencil, self.j, shape=shape)
+        matrix = matrix.tocsr()
+        jmin = -np.min(self.j)
+        if jmin > 0:
+            for i in range(jmin):
+                matrix[i,-jmin+i:] = self.stencil[:jmin-i]
+
+        jmax = np.max(self.j)
+        if jmax > 0:
+            for i in range(jmax):
+                matrix[-jmax+i,:i+1] = self.stencil[-i-1:]
+        self.matrix = matrix
 
 
 class DifferenceNonUniformGrid:
 
     def __init__(self, derivative_order, convergence_order, grid, stencil_type='centered'):
+        if (derivative_order + convergence_order) % 2 == 0:
+            raise ValueError("The derivative plus convergence order must be odd for centered finite difference")
 
         self.derivative_order = derivative_order
         self.convergence_order = convergence_order
         self.stencil_type = stencil_type
-        self.grid = grid
-        
-        
-        c = math.floor(self.convergence_order/2)
-        
-        j = np.arange(-c,c+1)
-        b = np.zeros(2*c+1,dtype = int)
-        b[self.derivative_order] = 1
-        S = []
-        i = 0
-        while i<2*c+1:
-            S.append(list(1/factorial(i)*(j*self.grid.dx)**i))
-            i = i+1
-        a = np.linalg.inv(S) @ b
-        D = sparse.diags(a, offsets=j, shape = [5,5])
-        D = D.tocsr()
-        p = 0
-        while p < len(j)/2:
-            D[0,j[p]] = a[p]
-            D[j[p],0] = a[-p-1]
-            p = p + 1
-        
-        
-        self.matrix = D
+        self._stencil_shape(stencil_type)
+        self._make_stencil(grid)
+        self._build_matrix(grid)
 
     def __matmul__(self, other):
         return self.matrix @ other
-    
 
+    def _stencil_shape(self, stencil_type):
+        dof = self.derivative_order + self.convergence_order
+        j = np.arange(dof) - dof//2
+        self.dof = dof
+        self.j = j
 
-class DifferenceNonUniformGrid:
+    def _make_stencil(self, grid):
+        self.dx = grid.dx_array(self.j)
 
-    def __init__(self, derivative_order, convergence_order, grid, stencil_type='centered'):
-        self.derivative_order = derivative_order
-        self.convergence_order = convergence_order
-        self.stencil_type = stencil_type
-        self.grid = grid
-        
-        ##define needed variables
-        size = convergence_order + derivative_order  + 2
-        
-        j = np.arange(int(-(size+1)/2+1),int((size+1)/2))
-        b = np.zeros(size,dtype = int)
-        b[self.derivative_order] = 1
-        
-        
-        grid = self.grid.values
-        length = self.grid.length
-        N = self.grid.N
-        
-        ##create x matrix
-        n = 0
-        s = 0
-        x = np.array([list(np.zeros(size)) for x in range(N)])
-        while n < N-max(j):
-            while s < size:
-                x[n][s]=grid[n+j[s]]
-                s = s+1
-            s = 0
-            n = n+1
-        s = 0
-        r = 0
-        while n<N:
-            while n+j[s]<N:
-                x[n][s] = grid[n+j[s]]
-                s = s+1
-            while s<size:
-                x[n][s] = grid[r]
-                s = s+1 
-                r = r+1
-            s = 0
-            r = 0
-            n = n+1
+        i = np.arange(self.dof)[None, :, None]
+        dx = self.dx[:, None, :]
+        S = 1/factorial(i)*(dx)**i
 
-        ##create h matrix
-        h = np.array([list(np.zeros(size)) for x in range(N)])
-        i = 0
-        m = 0
-        while i<N:
-            while m<(size-1)/2:
-                h[i][m] = abs(x[i][m+1]-x[i][m])
-                m = m+1
-            h[i][m] = 0
-            m = m+1
-            while m<size:
-                h[i][m] = abs(x[i][m]-x[i][m-1])
-                m = m+1
-            m = 0
-            i = i+1
-        for u in h:
-            v = 0
-            while v<size:
-                if u[v] == grid[-1]:
-                    u[v] = length-grid[-1]
-                v = v+1
+        b = np.zeros( (grid.N, self.dof) )
+        b[:, self.derivative_order] = 1.
 
-        jn = np.array([list(np.zeros(size)) for x in range(N)])
-        i = 0
-        m = 0
-        while i<N:
-            while m<(size-1)/2:
-                jn[i][m] = -sum(h[i][m:int((size-1)/2)])
-                m = m+1
-            h[i][m] = 0
-            m = m+1
-            while m<size:
-                jn[i][m] = sum(h[i][int((size-1)/2):m+1])
-                m = m+1
-            m = 0
-            i = i+1
+        self.stencil = np.linalg.solve(S, b)
 
-        
-        
-        ##create a matrix using individual s matrix
-        a = [np.zeros(size).tolist() for x in range(N)]
-        n = 0
-        while n < N:
-            S = []
-            i = 0
-            while i<size:
-                S.append(list(((jn[n])**i)/factorial(i)))
-                i = i+1
-            a[n] = np.linalg.solve(S,b)
-           # print(a[n])
-            n = n+1
-
-        
-
-        ##transpose a
-        counter = 0
-        ax = []
-        while counter <size:  
-            ax.append([sub[counter] for sub in a])
-            counter = counter + 1
-        
-        print(ax)
-        c = 0
-        while c<(size-1)/2:
-            if j[c]!=0:
-                ax[c] = ax[c][abs(j[c]):N-abs(j[c])+5] + [0 for x in range(abs(j[c]))]
-                c = c+1
+    def _build_matrix(self, grid):
+        shape = [grid.N] * 2
+        diags = []
+        for i, jj in enumerate(self.j):
+            if jj < 0:
+                s = slice(-jj, None, None)
             else:
-                c = c+1
-        print(np.array(ax))
-        
-        ##create sparse matrix
-        D = sparse.diags(ax, offsets=j,shape = [N,N])
-        D = D.tocsr()
+                s = slice(None, None, None)
+            diags.append(self.stencil[s, i])
+        matrix = sparse.diags(diags, self.j, shape=shape)
 
-        ##impute corner cases
-        p = 0
-        q = 0
-        r = 0
-        while p < size:
-            while q < size:
-                D[p,j[q]] = a[p][r]
-                D[-(p+1),-j[q]-1] = a[-p-1][-r-1]
-                q = q+1
-                r = r + 1
-            p = p + 1
-            q = p
-            r = 0 
+        matrix = matrix.tocsr()
+        jmin = -np.min(self.j)
+        if jmin > 0:
+            for i in range(jmin):
+                matrix[i,-jmin+i:] = self.stencil[i, :jmin-i]
 
-        ##assign attribute
-        self.matrix = D
+        jmax = np.max(self.j)
+        if jmax > 0:
+            for i in range(jmax):
+                matrix[-jmax+i,:i+1] = self.stencil[-jmax+i, -i-1:]
 
-
-    def __matmul__(self, other):
-        return self.matrix @ other
+        self.matrix = matrix
     
 class Difference:
 
