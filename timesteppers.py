@@ -1,5 +1,7 @@
 import numpy as np
 import math
+import scipy.sparse as sparse
+import scipy.sparse.linalg as spla
 
 class Timestepper:
 
