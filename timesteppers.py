@@ -141,3 +141,104 @@ class AdamsBashforth(Timestepper):
                 i = i+1
             self.uf.append(np.sum(np.transpose(u_f),axis=1))
             return np.sum(np.transpose(u_f),axis=1)
+        
+class BackwardEuler(Timestepper):
+
+    def __init__(self, u, L):
+        super().__init__(u, L)
+        N = len(u)
+        self.I = sparse.eye(N, N)
+
+    def _step(self, dt):
+        if dt != self.dt:
+            self.LHS = self.I - dt*self.func.matrix
+            self.LU = spla.splu(self.LHS.tocsc(), permc_spec='NATURAL')
+        self.dt = dt
+        return self.LU.solve(self.u)
+
+
+class CrankNicolson(Timestepper):
+
+    def __init__(self, u, L_op):
+        super().__init__(u, L_op)
+        N = len(u)
+        self.I = sparse.eye(N, N)
+
+    def _step(self, dt):
+        if dt != self.dt:
+            self.LHS = self.I - dt/2*self.func.matrix
+            self.RHS = self.I + dt/2*self.func.matrix
+            self.LU = spla.splu(self.LHS.tocsc(), permc_spec='NATURAL')
+        self.dt = dt
+        return self.LU.solve(self.RHS @ self.u)
+
+
+class BackwardDifferentiationFormula(Timestepper):
+
+    def __init__(self, u, L_op, steps):
+        super().__init__(u, L_op)
+        N = len(u)
+        self.I = sparse.eye(N, N)
+        self.steps = steps
+        self.uf = []
+        self.uf.append(self.u)
+        self.dt = []
+        self.dt.append(0)
+
+    def _step(self, dt):
+        if self.iter+1 < self.steps:
+            self.dt.append(dt)
+            k = self.iter+2
+            s = np.array([np.zeros(k) for x in range(k)])
+            i = 0
+            while i<k:
+                j = 0
+                while j<k:
+                    s[j][i] = (-i*self.dt[-i-1])**j/math.factorial(j)
+                    j=j+1
+                i = i+1
+            a = np.zeros(k)
+            b = np.zeros(k)
+            b[1] = dt
+            a = np.linalg.inv(s).dot(b)
+            a0 = 1/a[0]
+            a = a*a0
+            LHS = (self.I-a0*dt*self.func.matrix).A
+            RHS = []
+            l = 1
+            while l<k:
+                RHS.append(-a[l]*self.uf[-l])
+                l = l+1 
+            R = np.sum(np.transpose(RHS),axis=1)
+            unew = np.linalg.solve(LHS,R)
+            self.uf.append(unew)
+            return unew
+        else:
+            self.dt.append(dt)
+            k = self.steps+1
+            s = np.array([np.zeros(k) for x in range(k)])
+            i = 0
+            while i<k:
+                j = 0
+                while j<k:
+                    s[j][i] = (-i*self.dt[-i-1])**j/math.factorial(j)
+                    j=j+1
+                i = i+1
+            a = np.zeros(k)
+            b = np.zeros(k)
+            b[1] = dt
+            a = np.linalg.inv(s).dot(b)
+            a0 = 1/a[0]
+            a = a*a0
+            LHS = (self.I-a0*dt*self.func.matrix).A
+            RHS = []
+            l = 1
+            while l<self.steps+1:
+                RHS.append(-a[l]*self.uf[-l])
+                l = l+1
+            R = np.sum(np.transpose(RHS),axis=1)
+            unew = np.linalg.solve(LHS,R)
+            self.uf = self.uf[1:]
+            self.dt = self.dt[1:]
+            self.uf.append(unew)
+            return unew
