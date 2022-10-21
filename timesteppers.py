@@ -248,5 +248,4 @@ class BackwardDifferentiationFormula(Timestepper):
             self.dt = self.dt[1:]
             self.uf.append(unew)
             return unew
-            self.uf.append(unew)
-            return unew
+
