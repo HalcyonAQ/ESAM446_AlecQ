@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-import finite_i as finite
+import finite as finite
 import timesteppers as timesteppers
 import equations
 
