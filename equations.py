@@ -1,4 +1,4 @@
-from timesteppers_s import StateVector
+from timesteppers import StateVector
 from scipy import sparse
 import numpy as np
 
