@@ -88,6 +88,6 @@ class ReactionDiffusion:
         
        
         self.M = I
-        self.L = -self.D*self.d2.matrix
+        self.L = -self.D*self.d2
         self.F = lambda X: X.data*(c_target - X.data)
 
