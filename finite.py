@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.special import factorial
 from scipy import sparse
+from farray import apply_matrix, reshape_vector
 
 class UniformPeriodicGrid:
 
@@ -40,21 +41,56 @@ class NonUniformPeriodicGrid:
         return dx
 
 
-class DifferenceUniformGrid:
+class Domain:
 
-    def __init__(self, derivative_order, convergence_order, grid, stencil_type='centered'):
+    def __init__(self, grids):
+        self.dimension = len(grids)
+        self.grids = grids
+        shape = []
+        for grid in self.grids:
+            shape.append(grid.N)
+        self.shape = shape
+
+    def values(self):
+        v = []
+        for i, grid in enumerate(self.grids):
+            grid_v = grid.values
+            grid_v = reshape_vector(grid_v, self.dimension, i)
+            v.append(grid_v)
+        return v
+
+    def plotting_arrays(self):
+        v = []
+        expanded_shape = np.array(self.shape, dtype=np.int)
+        expanded_shape += 1
+        for i, grid in enumerate(self.grids):
+            grid_v = grid.values
+            grid_v = np.concatenate((grid_v, [grid.length]))
+            grid_v = reshape_vector(grid_v, self.dimension, i)
+            grid_v = np.broadcast_to(grid_v, expanded_shape)
+            v.append(grid_v)
+        return v
+
+
+class Difference:
+
+    def __matmul__(self, other):
+        return apply_matrix(self.matrix, other, axis=self.axis)
+
+
+class DifferenceUniformGrid(Difference):
+
+    def __init__(self, derivative_order, convergence_order, grid, axis=0, stencil_type='centered'):
         if stencil_type == 'centered' and convergence_order % 2 != 0:
             raise ValueError("Centered finite difference has even convergence order")
 
         self.derivative_order = derivative_order
         self.convergence_order = convergence_order
         self.stencil_type = stencil_type
+        self.axis = axis
         self._stencil_shape(stencil_type)
         self._make_stencil(grid)
         self._build_matrix(grid)
-
-    def __matmul__(self, other):
-        return self.matrix @ other
 
     def _stencil_shape(self, stencil_type):
         dof = self.derivative_order + self.convergence_order
@@ -96,21 +132,19 @@ class DifferenceUniformGrid:
         self.matrix = matrix
 
 
-class DifferenceNonUniformGrid:
+class DifferenceNonUniformGrid(Difference):
 
-    def __init__(self, derivative_order, convergence_order, grid, stencil_type='centered'):
+    def __init__(self, derivative_order, convergence_order, grid, axis=0, stencil_type='centered'):
         if (derivative_order + convergence_order) % 2 == 0:
             raise ValueError("The derivative plus convergence order must be odd for centered finite difference")
 
         self.derivative_order = derivative_order
         self.convergence_order = convergence_order
         self.stencil_type = stencil_type
+        self.axis = axis
         self._stencil_shape(stencil_type)
         self._make_stencil(grid)
         self._build_matrix(grid)
-
-    def __matmul__(self, other):
-        return self.matrix @ other
 
     def _stencil_shape(self, stencil_type):
         dof = self.derivative_order + self.convergence_order
@@ -153,16 +187,12 @@ class DifferenceNonUniformGrid:
                 matrix[-jmax+i,:i+1] = self.stencil[-jmax+i, -i-1:]
 
         self.matrix = matrix
-    
-class Difference:
-
-    def __matmul__(self, other):
-        return self.matrix @ other
 
 
 class ForwardFiniteDifference(Difference):
 
-    def __init__(self, grid):
+    def __init__(self, grid, axis=0):
+        self.axis = axis
         h = grid.dx
         N = grid.N
         j = [0, 1]
@@ -171,10 +201,12 @@ class ForwardFiniteDifference(Difference):
         matrix = matrix.tocsr()
         matrix[-1, 0] = 1/h
         self.matrix = matrix
-    
+
+
 class CenteredFiniteDifference(Difference):
 
-    def __init__(self, grid):
+    def __init__(self, grid, axis=0):
+        self.axis = axis
         h = grid.dx
         N = grid.N
         j = [-1, 0, 1]
@@ -188,7 +220,8 @@ class CenteredFiniteDifference(Difference):
 
 class CenteredFiniteSecondDifference(Difference):
 
-    def __init__(self, grid):
+    def __init__(self, grid, axis=0):
+        self.axis = axis
         h = grid.dx
         N = grid.N
         j = [-1, 0, 1]
@@ -202,7 +235,8 @@ class CenteredFiniteSecondDifference(Difference):
 
 class CenteredFiniteDifference4(Difference):
 
-    def __init__(self, grid):
+    def __init__(self, grid, axis=0):
+        self.axis = axis
         h = grid.dx
         N = grid.N
         j = [-2, -1, 0, 1, 2]
@@ -217,4 +251,5 @@ class CenteredFiniteDifference4(Difference):
         matrix[0, -1] = -8/(12*h)
         matrix[1, -1] = 1/(12*h)
         self.matrix = matrix
+
 
