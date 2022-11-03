@@ -1,6 +1,136 @@
-from timesteppers import StateVector
 from scipy import sparse
+import timesteppers as timesteppers
+from timesteppers import StateVector, CrankNicolson, RK22
+import finite as finite
 import numpy as np
+
+class Diffusionx:
+
+    def __init__(self, c, D, d2x):
+        self.X = timesteppers.StateVector([c], axis=0)
+        N = c.shape[0]
+        self.M = sparse.eye(N, N)
+        self.L = -D*d2x.matrix
+
+
+class Diffusiony:
+
+    def __init__(self, c, D, d2y):
+        self.X = timesteppers.StateVector([c], axis=1)
+        N = c.shape[1]
+        self.M = sparse.eye(N, N)
+        self.L = -D*d2y.matrix
+        
+        
+class DiffusionR:
+    def __init__(self,c):
+        N = len(c[0])
+        self.X = timesteppers.StateVector([c])
+        self.F = lambda X: X.data*(1 - X.data)
+
+
+class ReactionDiffusion2D:
+
+    def __init__(self, c, D, dx2, dy2):
+        self.c = c
+        self.D = D
+        self.dx2 = dx2
+        self.dy2 = dy2
+        self.iter = 0
+        self.t = 0
+            
+    def step(self,dt):
+        diffx = Diffusionx(self.c, self.D, self.dx2)
+        diffy = Diffusiony(self.c, self.D, self.dy2)
+        diffr = DiffusionR(self.c)
+        ts_x = timesteppers.CrankNicolson(diffx, 0)
+        ts_y = timesteppers.CrankNicolson(diffy, 1)
+        rs = timesteppers.RK22(diffr)
+        rs.step(1/2*dt)
+        ts_y.step(1/2*dt)
+        ts_x.step(dt)
+        ts_y.step(1/2*dt)
+        rs.step(1/2*dt)
+        self.t = self.t + dt
+        self.iter = self.iter+1
+
+class Diffusionx_b:
+
+    def __init__(self, u ,v, nu,spatial_order, domain):
+        self.X = StateVector([u,v])
+        self.u = u
+        self.v = v
+        self.x, self.y = domain.values()
+        self.nu = nu
+        self.spatial_order = spatial_order
+        self.domain = domain
+        self.d2x = finite.DifferenceNonUniformGrid(2,spatial_order,self.x)
+        N = len(u)
+        self.M = sparse.eye(N, N)
+        self.L = -nu*d2x.matrix
+
+
+class Diffusiony_b:
+
+    def __init__(self, u ,v, nu,spatial_order, domain):
+        self.X = StateVector([u,v])
+        self.u = u
+        self.v = v
+        self.x, self.y = domain.values()
+        self.nu = nu
+        self.spatial_order = spatial_order
+        self.domain = domain
+        self.d2y = finite.DifferenceNonUniformGrid(2,spatial_order,self.y)
+        N = len(u)
+        self.M = sparse.eye(N, N)
+        self.L = -nu*d2y.matrix
+
+        
+class DiffusionR_b:
+    def __init__(self, u ,v, nu,spatial_order, domain):
+        self.X = StateVector([u,v])
+        self.u = u
+        self.v = v
+        x, y = domain.values()
+        self.nu = nu
+        self.spatial_order = spatial_order
+        self.domain = domain
+        dx = finite.DifferenceNonUniformGrid(1,spatial_order,x)
+        dy = finite.DifferenceNonUniformGrid(1,spatial_order,y)
+        f = lambda X: -X.data[0]*(dx @ X.data)-X.data[1]*(dy @ X.data)
+        self.F = f
+class ViscousBurgers2D:
+
+    def __init__(self, u, v, nu, spatial_order, domain):
+        self.X = StateVector([u,v])
+        self.u = u
+        self.v = v
+        self.x, self.y = domain.values()
+        self.nu = nu
+        self.spatial_order = spatial_order
+        self.domain = domain
+        self.iter = 0
+        self.t = 0
+        self.d2x = finite.DifferenceNonUniformGrid(2,spatial_order,self.x)
+        self.d2y = finite.DifferenceNonUniformGrid(2,spatial_order,self.y)
+        self.dx = finite.DifferenceNonUniformGrid(1,spatial_order,self.x)
+        self.dy = finite.DifferenceNonUniformGrid(1,spatial_order,self.y)
+
+    def step(self, dt):
+        diffx = Diffusionx_b(self.u,self.v,self.nu,self.spatial_order,self.domain)
+        diffy = Diffusiony_b(self.u,self.v,self.nu,self.spatial_order,self.domain)
+        diffr = DiffusionR_b(self.u,self.v,self.nu,self.spatial_order,self.domain)
+        ts_x = timesteppers.CrankNicolson(diffx, 0)
+        ts_y = timesteppers.CrankNicolson(diffy, 1)
+        rs = timesteppers.RK22(diffr)
+        rs.step(1/2*dt)
+        ts_y.step(1/2*dt)
+        ts_x.step(dt)
+        ts_y.step(1/2*dt)
+        rs.step(1/2*dt)
+        self.t = self.t + dt
+        self.iter = self.iter+1
+
 
 class ViscousBurgers:
     
