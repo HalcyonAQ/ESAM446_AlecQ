@@ -67,7 +67,7 @@ class Diffusionx_b:
         self.d2x = finite.DifferenceNonUniformGrid(2,spatial_order,self.x)
         N = len(u)
         self.M = sparse.eye(N, N)
-        self.L = -nu*d2x.matrix
+        self.L = -nu*self.d2x.matrix
 
 
 class Diffusiony_b:
@@ -83,7 +83,7 @@ class Diffusiony_b:
         self.d2y = finite.DifferenceNonUniformGrid(2,spatial_order,self.y)
         N = len(u)
         self.M = sparse.eye(N, N)
-        self.L = -nu*d2y.matrix
+        self.L = -nu*self.d2y.matrix
 
         
 class DiffusionR_b:
