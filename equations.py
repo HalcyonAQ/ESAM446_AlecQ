@@ -95,8 +95,8 @@ class DiffusionR_b:
         self.nu = nu
         self.spatial_order = spatial_order
         self.domain = domain
-        dx = finite.DifferenceNonUniformGrid(1,spatial_order,x)
-        dy = finite.DifferenceNonUniformGrid(1,spatial_order,y)
+        dx = finite.DifferenceNonUniformGrid(1,spatial_order+1,x)
+        dy = finite.DifferenceNonUniformGrid(1,spatial_order+1,y)
         f = lambda X: -X.data[0]*(dx @ X.data)-X.data[1]*(dy @ X.data)
         self.F = f
 class ViscousBurgers2D:
@@ -113,8 +113,8 @@ class ViscousBurgers2D:
         self.t = 0
         self.d2x = finite.DifferenceNonUniformGrid(2,spatial_order,self.x)
         self.d2y = finite.DifferenceNonUniformGrid(2,spatial_order,self.y)
-        self.dx = finite.DifferenceNonUniformGrid(1,spatial_order,self.x)
-        self.dy = finite.DifferenceNonUniformGrid(1,spatial_order,self.y)
+        self.dx = finite.DifferenceNonUniformGrid(1,spatial_order+1,self.x)
+        self.dy = finite.DifferenceNonUniformGrid(1,spatial_order+1,self.y)
 
     def step(self, dt):
         diffx = Diffusionx_b(self.u,self.v,self.nu,self.spatial_order,self.domain)
