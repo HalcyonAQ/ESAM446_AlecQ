@@ -57,64 +57,89 @@ class ReactionDiffusion2D:
 class Diffusionx_b:
 
     def __init__(self, u ,v, nu,spatial_order, domain):
-        self.X = StateVector([u,v])
-        self.u = u
-        self.v = v
-        self.x, self.y = domain.values()
+        self.X = StateVector([u,v],axis = 0)
+        self.u = self.X.variables[0]
+        self.v = self.X.variables[1]
+        self.x, self.y = domain.grids
         self.nu = nu
         self.spatial_order = spatial_order
         self.domain = domain
-        self.d2x = finite.DifferenceNonUniformGrid(2,spatial_order,self.x)
+        self.d2x = finite.DifferenceUniformGrid(2,spatial_order,self.x,0)
         N = len(u)
-        self.M = sparse.eye(N, N)
-        self.L = -nu*self.d2x.matrix
 
+        I = sparse.eye(N, N)
+        Z = sparse.csr_matrix((N, N))
 
+        M00 = I
+        M01 = Z
+        M10 = Z
+        M11 = I
+        self.M = sparse.bmat([[M00, M01],
+                              [M10, M11]])
+
+        L00 = -nu*self.d2x.matrix
+        L01 = Z
+        L10 = Z
+        L11 = -nu*self.d2x.matrix
+        self.L = sparse.bmat([[L00, L01],
+                              [L10, L11]])
+        
 class Diffusiony_b:
 
     def __init__(self, u ,v, nu,spatial_order, domain):
-        self.X = StateVector([u,v])
-        self.u = u
-        self.v = v
-        self.x, self.y = domain.values()
+        self.X = StateVector([u,v], axis=1)
+        self.u = self.X.variables[0]
+        self.v = self.X.variables[1]
+        self.x, self.y = domain.grids
         self.nu = nu
         self.spatial_order = spatial_order
         self.domain = domain
-        self.d2y = finite.DifferenceNonUniformGrid(2,spatial_order,self.y)
+        self.d2y = finite.DifferenceUniformGrid(2,spatial_order,self.y,1)
         N = len(u)
-        self.M = sparse.eye(N, N)
-        self.L = -nu*self.d2y.matrix
+        I = sparse.eye(N, N)
+        Z = sparse.csr_matrix((N, N))
+
+        M00 = I
+        M01 = Z
+        M10 = Z
+        M11 = I
+        self.M = sparse.bmat([[M00, M01],
+                              [M10, M11]])
+
+        L00 = -nu*self.d2y.matrix
+        L01 = Z
+        L10 = Z
+        L11 = -nu*self.d2y.matrix
+        self.L = sparse.bmat([[L00, L01],
+                              [L10, L11]])
 
         
 class DiffusionR_b:
     def __init__(self, u ,v, nu,spatial_order, domain):
         self.X = StateVector([u,v])
-        self.u = u
-        self.v = v
-        x, y = domain.values()
+        self.u = self.X.variables[0]
+        self.v = self.X.variables[1]
+        x, y = domain.grids
         self.nu = nu
         self.spatial_order = spatial_order
         self.domain = domain
-        dx = finite.DifferenceNonUniformGrid(1,spatial_order,x)
-        dy = finite.DifferenceNonUniformGrid(1,spatial_order,y)
-        f = lambda X: -X.data[0]*(dx @ X.data)-X.data[1]*(dy @ X.data)
-        self.F = f
+        dx = finite.DifferenceUniformGrid(1,spatial_order,x,0)
+        dy = finite.DifferenceUniformGrid(1,spatial_order,y,1)
+        self.F = lambda X: -np.append(X.variables[0]*(dx@X.variables[0])+X.variables[1]*(dy@X.variables[0]),X.variables[0]*(dx@X.variables[1])+X.variables[1]*(dy@X.variables[1]),axis=0)
+        
 class ViscousBurgers2D:
 
     def __init__(self, u, v, nu, spatial_order, domain):
         self.X = StateVector([u,v])
-        self.u = u
-        self.v = v
-        self.x, self.y = domain.values()
+        self.u = self.X.variables[0]
+        self.v = self.X.variables[1]
+        self.x, self.y = domain.grids
         self.nu = nu
         self.spatial_order = spatial_order
         self.domain = domain
         self.iter = 0
         self.t = 0
-        self.d2x = finite.DifferenceNonUniformGrid(2,spatial_order+1,self.x)
-        self.d2y = finite.DifferenceNonUniformGrid(2,spatial_order+1,self.y)
-        self.dx = finite.DifferenceNonUniformGrid(1,spatial_order,self.x)
-        self.dy = finite.DifferenceNonUniformGrid(1,spatial_order,self.y)
+       
 
     def step(self, dt):
         diffx = Diffusionx_b(self.u,self.v,self.nu,self.spatial_order,self.domain)
@@ -123,11 +148,11 @@ class ViscousBurgers2D:
         ts_x = timesteppers.CrankNicolson(diffx, 0)
         ts_y = timesteppers.CrankNicolson(diffy, 1)
         rs = timesteppers.RK22(diffr)
-        rs.step(1/2*dt)
         ts_y.step(1/2*dt)
-        ts_x.step(dt)
+        ts_x.step(1/2*dt)
+        rs.step(dt)
+        ts_x.step(1/2*dt)
         ts_y.step(1/2*dt)
-        rs.step(1/2*dt)
         self.t = self.t + dt
         self.iter = self.iter+1
 
