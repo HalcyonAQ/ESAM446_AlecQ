@@ -115,8 +115,7 @@ class Diffusiony_b:
 
         
 class DiffusionR_b:
-    def __init__(self, u ,v, nu,spatial_order, domain):
-        self.X = StateVector([u,v])
+            self.X = StateVector([u,v])
         self.u = self.X.variables[0]
         self.v = self.X.variables[1]
         x, y = domain.grids
@@ -125,8 +124,9 @@ class DiffusionR_b:
         self.domain = domain
         dx = finite.DifferenceUniformGrid(1,spatial_order,x,0)
         dy = finite.DifferenceUniformGrid(1,spatial_order,y,1)
-        self.F = lambda X: -np.append(X.variables[0]*(dx@X.variables[0])+X.variables[1]*(dy@X.variables[0]),X.variables[0]*(dx@X.variables[1])+X.variables[1]*(dy@X.variables[1]),axis=0)
-        
+        r = -np.append(dx@u,dx@u,axis=0)*self.X.data-np.append(dy@v,dy@v,axis=0)*self.X.data
+        f = lambda X: r
+        self.F = f
 class ViscousBurgers2D:
 
     def __init__(self, u, v, nu, spatial_order, domain):
