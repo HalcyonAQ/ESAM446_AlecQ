@@ -115,7 +115,7 @@ class Diffusiony_b:
 
         
 class DiffusionR_b:
-            self.X = StateVector([u,v])
+        self.X = StateVector([u,v])
         self.u = self.X.variables[0]
         self.v = self.X.variables[1]
         x, y = domain.grids
