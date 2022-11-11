@@ -103,6 +103,7 @@ class DWp:
         
 class Wave2DBC:
     def __init__(self,u, v, p, spatial_order, domain):
+        self.X = timesteppers.StateVector[u,v,p]
         self.u = u
         self.v = v
         self.p = p
