@@ -41,6 +41,17 @@ class NonUniformPeriodicGrid:
         return dx
 
 
+class UniformNonPeriodicGrid:
+
+    def __init__(self, N, interval):
+        """ Non-uniform grid; no grid points at the endpoints of the interval"""
+        self.start = interval[0]
+        self.end = interval[1]
+        self.dx = (self.end - self.start)/(N-1)
+        self.N = N
+        self.values = np.linspace(self.start, self.end, N, endpoint=True)
+
+
 class Domain:
 
     def __init__(self, grids):
@@ -194,7 +205,6 @@ class DifferenceUniformGrid(Difference):
                     else:
                         matrix[-jmax+i,:i+1] = self.stencil[-i-1:]
         self.matrix = matrix
-
 
 class DifferenceNonUniformGrid(Difference):
 
