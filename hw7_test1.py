@@ -1,8 +1,8 @@
 import pytest
 import numpy as np
-import finite as finite
-import timesteppers as timesteppers
-import equations as equations
+import finite
+import timesteppers
+import equations
 
 error_derivative_1 = {(50, 2): 0.005, (100, 2): 0.0015, (200, 2): 4e-4, (50, 4): 4e-5, (100, 4): 2e-6, (200, 4): 1.5e-7, (50, 6): 3e-7, (100, 6): 4e-9, (200, 6): 7e-11}
 @pytest.mark.parametrize('resolution', [50, 100, 200])
@@ -33,6 +33,7 @@ def test_diffusion_equation(resolution, alpha, spatial_order):
 
     c = np.zeros(domain.shape)
     D = 1
+
     r = np.sqrt((x-3*np.pi/4)**2 + (y-np.pi/2)**2)
     IC = np.exp(-r**2*16)
     c[:] = IC
