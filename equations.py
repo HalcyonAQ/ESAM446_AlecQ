@@ -108,7 +108,7 @@ class Wave2DBC:
         self.p = p
         self.spatial_order = spatial_order
         self.domain = domain
-        self.x, self.y = domain.values()
+        self.x, self.y = domain.grids
         self.iter = 0
         self.t = 0
     def step(self, dt):
