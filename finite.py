@@ -107,28 +107,92 @@ class DifferenceUniformGrid(Difference):
 
         # assume constant grid spacing
         self.dx = grid.dx
+        
         i = np.arange(self.dof)[:, None]
         j = self.j[None, :]
         S = 1/factorial(i)*(j*self.dx)**i
 
         b = np.zeros( self.dof )
         b[self.derivative_order] = 1.
-
+        self.b = b
+        
         self.stencil = np.linalg.solve(S, b)
-
+        #print(self.stencil)
     def _build_matrix(self, grid):
         shape = [grid.N] * 2
         matrix = sparse.diags(self.stencil, self.j, shape=shape)
         matrix = matrix.tocsr()
-        jmin = -np.min(self.j)
-        if jmin > 0:
-            for i in range(jmin):
-                matrix[i,-jmin+i:] = self.stencil[:jmin-i]
+        j = self.j
 
-        jmax = np.max(self.j)
-        if jmax > 0:
-            for i in range(jmax):
-                matrix[-jmax+i,:i+1] = self.stencil[-i-1:]
+        
+        if isinstance(grid, UniformNonPeriodicGrid):
+            rep = len(j)//2 
+            
+            #top row portion
+            s_new = np.zeros([len(j), len(j)])
+            for i in range(len(j)):
+                for k in range(len(j)):
+                    s_new[i,k] = ((k*self.dx)**i)/factorial(i)
+            a_s = np.linalg.solve(s_new,self.b)
+            matrix[0,:len(j)] = a_s
+
+            #last row
+
+            s_inv = np.copy(s_new[:,::-1])
+            
+            for i in range(len(j)):
+                s_inv[i] *= (-1)**i
+            
+            last_a_s = np.linalg.solve(s_inv, self.b)
+           
+            for i in range(len(last_a_s)):
+                matrix[-1, -i-1] = last_a_s[-i-1]
+            
+
+            # the rest of the rows
+            for i in range(1, rep):
+                appcol = np.zeros(len(j))
+                for jj in range(len(j)):
+                    appcol[jj] = ((-i*self.dx)**jj)/factorial(jj)
+                
+
+                s_mod = np.zeros((len(j), len(j)))
+                s_mod[:,0] = appcol
+
+                s_mod[:,1:] = s_new[:,:-1]
+                
+                a_s = np.linalg.solve(s_mod, self.b)
+                matrix[i,:len(j)] = a_s
+                s_new = np.copy(s_mod)
+                
+
+
+                #bottom rows
+                s_inv = np.copy(s_mod[:,::-1])
+                for k in range(len(j)):
+                    s_inv[k,:] *= (-1)**k
+                last_a_s = np.linalg.solve(s_inv, self.b)
+                for kk in range(len(last_a_s)):
+                    matrix[-i-1, -kk-1] = last_a_s[-kk-1]
+
+            
+
+        if isinstance(grid, UniformPeriodicGrid):
+            jmin = -np.min(self.j)
+            if jmin > 0:
+                for i in range(jmin):
+                    if isinstance(grid, UniformNonPeriodicGrid):
+                        pass
+                    else:
+                        matrix[i,-jmin+i:] = self.stencil[:jmin-i]
+
+            jmax = np.max(self.j)
+            if jmax > 0:
+                for i in range(jmax):
+                    if isinstance(grid, UniformNonPeriodicGrid):
+                        pass
+                    else:
+                        matrix[-jmax+i,:i+1] = self.stencil[-i-1:]
         self.matrix = matrix
 
 
