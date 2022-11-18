@@ -4,6 +4,96 @@ from timesteppers import StateVector, CrankNicolson, RK22
 import finite as finite
 import numpy as np
 
+
+class ReactionDiffusionFI:
+    
+    def __init__(self, c, D, spatial_order, grid):
+        self.X = timesteppers.StateVector([c])
+        d2 = finite.DifferenceUniformGrid(2, spatial_order, grid)
+        self.N = len(c)
+        I = sparse.eye(self.N)
+        
+        self.M = I
+        self.L = -D*d2.matrix
+
+        def F(X):
+            return X.data*(1-X.data)
+        self.F = F
+        
+        def J(X):
+            c_matrix = sparse.diags(X.data)
+            return sparse.eye(self.N) - 2*c_matrix
+        
+        self.J = J
+
+
+class BurgersFI:
+    
+    def __init__(self, u, nu, spatial_order, grid):
+        self.X = timesteppers.StateVector([u])
+        d2 = finite.DifferenceUniformGrid(2, spatial_order, grid)
+        d = finite.DifferenceUniformGrid(1, spatial_order, grid)
+        self.N = len(u)
+        I = sparse.eye(self.N)
+        
+        self.M = I
+        self.L = -nu*d2.matrix
+        
+        f = lambda X: -X.data*(d.matrix @ X.data)
+        self.F = f
+        
+        def J(X):
+            matr_u = sparse.diags(X.data)
+            return  -d.matrix@matr_u - matr_u@d.matrix
+        
+        
+        self.J = J
+
+        
+        
+
+class ReactionTwoSpeciesDiffusion:
+    
+    def __init__(self, X, D, r, spatial_order, grid):
+        self.X = X
+        N = len(X[0])
+        I = sparse.eye(N)
+        Z = sparse.csr_matrix((N, N))
+        M00 = I
+        M01 = Z
+        M10 = Z
+        M11 = I
+        self.M = sparse.bmat([[M00, M01],
+                              [M10, M11]])
+        d2 = finite.DifferenceUniformGrid(2, spatial_order, grid)
+        L00 = -D*d2.matrix
+        L01 = Z
+        L10 = Z
+        L11 = -D*d2.matrix
+        self.L = sparse.bmat([[L00, L01],
+                              [L10, L11]])
+        
+
+        def F(X):
+            row_1 = X.variables[0]*(I - X.variables[0] - X.variables[1])
+            row_2 = r*X.variables[1]*(I-X.variables[1])
+            return np.concatenate(row_1,row_2, axis = 0)   #np.array(row_1,row_2)
+        self.F = F
+
+        def J(X):
+            J00 = I - 2*X.variables[0] - X.variables[1]
+            J01 = -X.variables[0]
+            J10 = r*X.variables[1]
+            J11 = r*X.variables[0] - 2*r*X.variables[1]
+
+            return sparse.bmat([[J00, J01],
+                              [J10, J11]]) 
+        self.J = J
+
+
+
+
+
 class DiffusionBC_x:
     def __init__(self, c, D, spatial_order, domain):
         self.X = timesteppers.StateVector([c], axis=0)
