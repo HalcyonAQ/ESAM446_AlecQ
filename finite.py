@@ -332,4 +332,45 @@ class CenteredFiniteDifference4(Difference):
         matrix[1, -1] = 1/(12*h)
         self.matrix = matrix
 
+class BoundaryCondition:
 
+    def __init__(self, derivative_order, convergence_order, grid):
+        self.derivative_order = derivative_order
+        self.convergence_order = convergence_order
+        self.dof = self.derivative_order + self.convergence_order
+        self.grid = grid
+        self._build_vector()
+
+    def _coeffs(self, dx, j):
+        i = np.arange(self.dof)[:, None]
+        j = j[None, :]
+        S = 1/factorial(i)*(j*dx)**i
+
+        b = np.zeros( self.dof )
+        b[self.derivative_order] = 1.
+
+        return np.linalg.solve(S, b)
+
+
+class Left(BoundaryCondition):
+
+    def _build_vector(self):
+        dx = self.grid.dx
+        j = np.arange(self.dof)
+
+        coeffs = self._coeffs(dx, j)
+
+        self.vector = np.zeros(self.grid.N)
+        self.vector[:self.dof] = coeffs
+
+
+class Right(BoundaryCondition):
+
+    def _build_vector(self):
+        dx = self.grid.dx
+        j = np.arange(self.dof) - self.dof + 1
+
+        coeffs = self._coeffs(dx, j)
+
+        self.vector = np.zeros(self.grid.N)
+        self.vector[-self.dof:] = coeffs
