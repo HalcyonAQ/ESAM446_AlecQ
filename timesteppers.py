@@ -399,3 +399,76 @@ class BDFExtrapolate(IMEXTimestepper):
             self.xs = self.xs[1:]
             self.xs.append(StateVector(np.array([LU.solve(R)])))
             return LU.solve(R)
+        
+class FullyImplicitTimestepper(timesteppers.Timestepper):
+
+    def __init__(self, eq_set, tol=1e-5):
+        super().__init__()
+        self.X = eq_set.X
+        self.M = eq_set.M
+        self.L = eq_set.L
+        self.F = eq_set.F
+        self.tol = tol
+        self.J = eq_set.J
+        
+    def step(self, dt, guess=None):
+        self.X.gather()
+        self.X.data = self._step(dt, guess)
+        self.X.scatter()
+        self.t += dt
+        self.iter += 1
+
+        
+class BackwardEulerFI(FullyImplicitTimestepper):
+
+    def _step(self, dt, guess):
+        if dt != self.dt:
+            self.LHS_matrix = self.M + dt*self.L
+            self.dt = dt
+
+        RHS = self.M @ self.X.data
+        if not (guess is None):
+            self.X.data[:] = guess
+        F = self.F(self.X)
+        LHS = self.LHS_matrix @ self.X.data - dt * F
+        residual = LHS - RHS
+        i_loop = 0
+        while np.max(np.abs(residual)) > self.tol:
+            jac = self.M + dt*self.L - dt*self.J(self.X)
+            dX = spla.spsolve(jac, -residual)
+            self.X.data += dX
+            F = self.F(self.X)
+            LHS = self.LHS_matrix @ self.X.data - dt * F
+            residual = LHS - RHS
+            i_loop += 1
+            if i_loop > 20:
+                print('error: reached more than 20 iterations')
+                break
+        return self.X.data
+
+
+class CrankNicolsonFI(FullyImplicitTimestepper):
+
+    def _step(self, dt, guess):
+        if dt!=self.dt:
+            self.LHS_matrix = self.M +dt/2 * self.L
+            self.dt = dt
+        if not (guess is None):
+            self.X.data[:] = guess
+        F = self.F(self.X)
+        LHS = self.LHS_matrix @ self.X.data- 1/2*dt * F
+        RHS = (self.M - dt/2*self.L)@self.X.data+1/2*dt * F
+        residual = LHS - RHS
+        i_loop = 0
+        while np.max(np.abs(residual)) > self.tol:
+            jac = self.M + 1/2*dt*self.L - 1/2*dt*self.J(self.X)
+            dX = spla.spsolve(jac,-residual)
+            self.X.data += dX
+            F = self.F(self.X)
+            LHS = self.LHS_matrix @ self.X.data- 1/2*dt * F
+            residual = LHS - RHS
+            i_loop += 1
+            if i_loop > 20:
+                print('error: reached more than 20 iterations')
+                break
+        return self.X.data
