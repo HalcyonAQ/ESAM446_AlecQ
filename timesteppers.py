@@ -5,6 +5,7 @@ from scipy.special import factorial
 from collections import deque
 from farray import axslice, apply_matrix
 import math
+import timesteppers
 
 class StateVector:
 
