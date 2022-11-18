@@ -134,24 +134,84 @@ class DifferenceUniformGrid(Difference):
         shape = [grid.N] * 2
         matrix = sparse.diags(self.stencil, self.j, shape=shape)
         matrix = matrix.tocsr()
-        jmin = -np.min(self.j)
-        if jmin > 0:
-            for i in range(jmin):
-                if isinstance(grid, UniformNonPeriodicGrid):
-                    j = np.arange(self.dof) - i
-                    matrix[i,:self.dof] = self._coeffs(grid, j)
-                else:
-                    matrix[i,-jmin+i:] = self.stencil[:jmin-i]
+        j = self.j
 
-        jmax = np.max(self.j)
-        if jmax > 0:
-            for i in range(jmax):
-                if isinstance(grid, UniformNonPeriodicGrid):
-                    j = (np.arange(self.dof) - self.dof + 1) + i
-                    matrix[grid.N-1-i,-self.dof:] = self._coeffs(grid, j)
-                else:
-                    matrix[-jmax+i,:i+1] = self.stencil[-i-1:]
+        
+        if isinstance(grid, UniformNonPeriodicGrid):
+            how_many = len(j)//2 # this is the number of top/bottom rows to be changed
+           # print(j)
+            #working on top row
+            s_new = np.zeros([len(j), len(j)])
+            for row in range(len(j)):
+                for col in range(len(j)):
+                    s_new[row,col] = ((col*self.dx)**row)/factorial(row)
+            a_s = np.linalg.solve(s_new,self.b)
+            matrix[0,:len(j)] = a_s
+
+            # inverting this to get the last row
+
+            s_inverted = np.copy(s_new[:,::-1])
+            
+            for row in range(len(j)):
+                s_inverted[row] *= (-1)**row
+            
+            bottom_as = np.linalg.solve(s_inverted, self.b)
+           # print('og bottom as', bottom_as)
+            for kk in range(len(bottom_as)):
+                matrix[-1, -kk-1] = bottom_as[-kk-1]
+            #matrix[-1,-len(j)-1:-1:1] = bottom_as
+
+            # the rest of the rows
+            for i in range(1, how_many):
+                addable_col = np.zeros(len(j))
+                for jj in range(len(j)):
+                    addable_col[jj] = ((-i*self.dx)**jj)/factorial(jj)
+                #print(addable_col)
+
+                s_usable = np.zeros((len(j), len(j)))
+                s_usable[:,0] = addable_col
+
+                s_usable[:,1:] = s_new[:,:-1]
+               # print(s_usable)
+                a_s = np.linalg.solve(s_usable, self.b)
+                matrix[i,:len(j)] = a_s
+                s_new = np.copy(s_usable)
+                #print(a_s)
+
+
+                #bottom rows
+                s_inverted = np.copy(s_usable[:,::-1])
+                for row in range(len(j)):
+                    s_inverted[row,:] *= (-1)**row
+                bottom_as = np.linalg.solve(s_inverted, self.b)
+                for kk in range(len(bottom_as)):
+                    matrix[-i-1, -kk-1] = bottom_as[-kk-1]
+
+               # print('this is bottom as', bottom_as)
+                #matrix[-i-1, -len(j)-1:-1:1] = bottom_as
+            
+
+
+
+
+        #if isinstance(grid, UniformPeriodicGrid):
+            # jmin = -np.min(self.j)
+            # if jmin > 0:
+            #     for i in range(jmin):
+            #         if isinstance(grid, UniformNonPeriodicGrid):
+            #             pass
+            #         else:
+            #             matrix[i,-jmin+i:] = self.stencil[:jmin-i]
+
+            # jmax = np.max(self.j)
+            # if jmax > 0:
+            #     for i in range(jmax):
+            #         if isinstance(grid, UniformNonPeriodicGrid):
+            #             pass
+            #         else:
+            #             matrix[-jmax+i,:i+1] = self.stencil[-i-1:]
         self.matrix = matrix
+        #print(matrix.A)
 
 
 class DifferenceNonUniformGrid(Difference):
