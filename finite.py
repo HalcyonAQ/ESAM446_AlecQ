@@ -44,7 +44,7 @@ class NonUniformPeriodicGrid:
 class UniformNonPeriodicGrid:
 
     def __init__(self, N, interval):
-        """ Uniform grid; grid points at the endpoints of the interval"""
+        """ Non-uniform grid; no grid points at the endpoints of the interval"""
         self.start = interval[0]
         self.end = interval[1]
         self.dx = (self.end - self.start)/(N-1)
@@ -114,22 +114,21 @@ class DifferenceUniformGrid(Difference):
         self.dof = dof
         self.j = j
 
-    def _coeffs(self, grid, j):
+    def _make_stencil(self, grid):
 
         # assume constant grid spacing
         self.dx = grid.dx
+        
         i = np.arange(self.dof)[:, None]
-        j = j[None, :]
+        j = self.j[None, :]
         S = 1/factorial(i)*(j*self.dx)**i
 
         b = np.zeros( self.dof )
         b[self.derivative_order] = 1.
-
-        return np.linalg.solve(S, b)
-
-    def _make_stencil(self, grid):
-        self.stencil = self._coeffs(grid, self.j)
-
+        self.b = b
+        
+        self.stencil = np.linalg.solve(S, b)
+        #print(self.stencil)
     def _build_matrix(self, grid):
         shape = [grid.N] * 2
         matrix = sparse.diags(self.stencil, self.j, shape=shape)
@@ -213,7 +212,6 @@ class DifferenceUniformGrid(Difference):
         self.matrix = matrix
         #print(matrix.A)
 
-
 class DifferenceNonUniformGrid(Difference):
 
     def __init__(self, derivative_order, convergence_order, grid, axis=0, stencil_type='centered'):
@@ -269,50 +267,6 @@ class DifferenceNonUniformGrid(Difference):
                 matrix[-jmax+i,:i+1] = self.stencil[-jmax+i, -i-1:]
 
         self.matrix = matrix
-
-
-class BoundaryCondition:
-
-    def __init__(self, derivative_order, convergence_order, grid):
-        self.derivative_order = derivative_order
-        self.convergence_order = convergence_order
-        self.dof = self.derivative_order + self.convergence_order
-        self.grid = grid
-        self._build_vector()
-
-    def _coeffs(self, dx, j):
-        i = np.arange(self.dof)[:, None]
-        j = j[None, :]
-        S = 1/factorial(i)*(j*dx)**i
-
-        b = np.zeros( self.dof )
-        b[self.derivative_order] = 1.
-
-        return np.linalg.solve(S, b)
-
-
-class Left(BoundaryCondition):
-
-    def _build_vector(self):
-        dx = self.grid.dx
-        j = np.arange(self.dof)
-
-        coeffs = self._coeffs(dx, j)
-
-        self.vector = np.zeros(self.grid.N)
-        self.vector[:self.dof] = coeffs
-
-
-class Right(BoundaryCondition):
-
-    def _build_vector(self):
-        dx = self.grid.dx
-        j = np.arange(self.dof) - self.dof + 1
-
-        coeffs = self._coeffs(dx, j)
-
-        self.vector = np.zeros(self.grid.N)
-        self.vector[-self.dof:] = coeffs
 
 
 class ForwardFiniteDifference(Difference):
