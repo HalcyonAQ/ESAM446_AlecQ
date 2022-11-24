@@ -4,7 +4,6 @@ from timesteppers import StateVector, CrankNicolson, RK22
 import finite as finite
 import numpy as np
 
-
 class ReactionDiffusionFI:
     
     def __init__(self, c, D, spatial_order, grid):
@@ -43,21 +42,16 @@ class BurgersFI:
         self.F = f
         
         def J(X):
-            um = sparse.diags(X.data)
-            return  -d.matrix@um - um@d.matrix
-        
-        
+            matr_u = sparse.diags(X.data)
+            return  -d.matrix@matr_u - matr_u@d.matrix
         self.J = J
 
-        
-        
 
-class ReactionTwoSpeciesDiffusion:
-    
+class ReactionTwoSpeciesDiffusion: 
     def __init__(self, X, D, r, spatial_order, grid):
         self.X = X
         N = len(X.variables[0])
-        I = sparse.eye(N)
+        I = sparse.eye(N,N)
         Z = sparse.csr_matrix((N, N))
         M00 = I
         M01 = Z
@@ -72,26 +66,21 @@ class ReactionTwoSpeciesDiffusion:
         L11 = -D*d2.matrix
         self.L = sparse.bmat([[L00, L01],
                               [L10, L11]])
-        
-
         def F(X):
+            row_1 = X.data[0:N]*(1 - X.data[0:N] - X.data[N:2*N])
+            row_2 = r*X.data[N:2*N]*(X.data[0:N]-X.data[N:2*N])
 
-            v1 = X.variables[0]*(1 - X.variables[0] - X.variables[1])
-            v2 = r*X.variables[1]*(X.variables[0]-X.variables[1])
-
-            return np.concatenate((v1,v2),axis=0)
+            return np.concatenate((row_1,row_2),axis=0)
         self.F = F
-
         def J(X):
-            c1 = sparse.diags(X.variables[0])
-            c2 = sparse.diags(X.variables[1])
+            c1 = sparse.diags(X.data[0:N])
+            c2 = sparse.diags(X.data[N:2*N])
             J00 = I - 2*c1 - c2
             J01 = -c1
             J10 = r*c2
             J11 = r*c1 - 2*r*c2
             return sparse.bmat([[J00, J01],
                               [J10, J11]]) 
-            
         self.J = J
 
 
